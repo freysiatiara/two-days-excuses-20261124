@@ -43,8 +43,15 @@ def main() -> None:
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
+    # Write atomically: a crash mid-write must never leave a truncated
+    # entry.txt behind. The temp file lives next to the target so
+    # os.replace stays on the same filesystem.
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(line + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, path)
 
 
 if __name__ == "__main__":
